@@ -11,7 +11,7 @@
 
 SignBridge is a bilingual sign language recognition app for Android, built as a final year project at the Bangladesh University of Professionals. It reads American Sign Language and Bangla Sign Language through the phone's camera and speaks the recognized words and letters out loud, and it also listens to spoken speech and shows it as text, so a conversation can flow in both directions without needing an interpreter.
 
-Everything runs on the device itself. There is no server, no account, and no camera frame or audio ever leaves the phone. That was a deliberate choice from the start, not just a privacy footnote: the app has to work for someone who may not have reliable internet access, and the things it processes, a person's face, their hands, their speech, are not the kind of data that should need to touch a server at all.
+Everything runs on the device itself. There is no server, no account, and no camera frame or audio ever leaves the phone. That was a deliberate choice from the start, not just a privacy footnote: the app has to work for someone who may not have reliable internet access, and the things it processes, a person's hands, their speech, are not the kind of data that should need to touch a server at all.
 
 ## Project background
 
