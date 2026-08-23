@@ -5,6 +5,7 @@
 ![MediaPipe](https://img.shields.io/badge/MediaPipe-Hand%20Landmarker-00897B)
 ![TensorFlow Lite](https://img.shields.io/badge/TensorFlow%20Lite-on--device-FF6F00?logo=tensorflow&logoColor=white)
 ![Offline](https://img.shields.io/badge/Network-none%20required-informational)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ![Bangladesh University of Professionals](app/assets/branding/bup_logo.webp)
 
@@ -67,3 +68,9 @@ pip install -r requirements.txt
 ```
 
 From there, `ml/README.md` covers dataset setup and the individual training and evaluation scripts for each language and model.
+
+## License
+
+The code in this repository, the app and the training pipeline, is released under the MIT license, included in `LICENSE`.
+
+This does not extend to the third party datasets the training pipeline is built to use. Those are not included in this repository, and each one carries its own license, which is not always as permissive. Anyone retraining a model with them should check the terms of the specific dataset first.
