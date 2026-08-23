@@ -9,6 +9,9 @@
 /ml/.cache/
 /ml/.models/
 
+# Kept locally, not published to the public repo.
+/docs/PROJECT_REPORT.md
+
 # Python
 __pycache__/
 *.pyc

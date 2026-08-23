@@ -1,5 +1,11 @@
 # SignBridge
 
+![Flutter](https://img.shields.io/badge/Flutter-Dart-02569B?logo=flutter&logoColor=white)
+![Android](https://img.shields.io/badge/Android-minSdk%2024-3DDC84?logo=android&logoColor=white)
+![MediaPipe](https://img.shields.io/badge/MediaPipe-Hand%20Landmarker-00897B)
+![TensorFlow Lite](https://img.shields.io/badge/TensorFlow%20Lite-on--device-FF6F00?logo=tensorflow&logoColor=white)
+![Offline](https://img.shields.io/badge/Network-none%20required-informational)
+
 ![Bangladesh University of Professionals](app/assets/branding/bup_logo.webp)
 
 SignBridge is a bilingual sign language recognition app for Android, built as a final year project at the Bangladesh University of Professionals. It reads American Sign Language and Bangla Sign Language through the phone's camera and speaks the recognized words and letters out loud, and it also listens to spoken speech and shows it as text, so a conversation can flow in both directions without needing an interpreter.
@@ -14,7 +20,7 @@ Supervisor: Dr. Ahmedul Kabir, University of Dhaka.
 
 Team: Samiul Islam, Ahnaf Sayed, Abu Saeed Sabuj.
 
-The full project report, including the methodology, the datasets used, every model's measured accuracy, and an honest account of what did not work along the way, is in `docs/PROJECT_REPORT.md`.
+The full project report, including the methodology, the datasets used, every model's measured accuracy, and an honest account of what did not work along the way, was written as part of the academic submission and is not published in this repository. It is available on request.
 
 ## What it does
 
@@ -30,7 +36,7 @@ Both languages run real trained models rather than a placeholder. BdSL recognize
 
 ASL's letters and digits are handled by a separate, direct classifier rather than the same sequence model used for words, since a static handshape does not need to be treated as a moving gesture. That classifier was also trained with a wider range of rotation in its training data, which measurably fixed a real problem found during device testing, where certain letters were misread if the signing hand was not held at close to the same angle as the training photos.
 
-The full numbers, including what did not work and why, are in the project report.
+The full numbers, including what did not work and why, are in the project report described above.
 
 ## Repository layout
 
@@ -39,7 +45,7 @@ SignBridge/
   app/     Flutter Android application
   ml/      Python training and evaluation pipeline
   design/  Icon and splash artwork source
-  docs/    Project report and generated figures
+  docs/    Generated figures and supplementary technical notes
 ```
 
 The `ml/data` folder, which holds the raw training datasets, is not included in this repository. Some of those datasets carry licenses that restrict redistribution, and even the ones that do not are too large to reasonably keep in version control. The scripts that expect them, and where to get each dataset, are documented in `ml/README.md`.
