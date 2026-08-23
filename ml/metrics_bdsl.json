@@ -1,0 +1,251 @@
+{
+  "language": "bdsl",
+  "n_val": 3257,
+  "n_classes": 107,
+  "overall": {
+    "accuracy": 0.8283696653361989,
+    "top5_accuracy": 0.9557875345409886,
+    "chance": 0.009345794392523364,
+    "macro_precision": 0.76875135962163,
+    "macro_recall": 0.7667893578418639,
+    "macro_f1": 0.748809055193571,
+    "weighted_precision": 0.8458037688459987,
+    "weighted_recall": 0.8283696653361989,
+    "weighted_f1": 0.8243710839193888
+  },
+  "by_category": {
+    "word": {
+      "n": 2710,
+      "n_classes": 60,
+      "accuracy": 0.866789667896679,
+      "accuracy_in_app_masked": 0.8671586715867159,
+      "top5_accuracy": 0.9630996309963099,
+      "macro_precision": 0.8764038091859255,
+      "macro_recall": 0.8685098112239867,
+      "macro_f1": 0.8646590372022648
+    },
+    "digit": {
+      "n": 214,
+      "n_classes": 10,
+      "accuracy": 0.705607476635514,
+      "accuracy_in_app_masked": 0.9953271028037384,
+      "top5_accuracy": 0.9953271028037384,
+      "macro_precision": 1.0,
+      "macro_recall": 0.7079848084615701,
+      "macro_f1": 0.7809656262396039
+    },
+    "letter": {
+      "n": 333,
+      "n_classes": 37,
+      "accuracy": 0.5945945945945946,
+      "accuracy_in_app_masked": 0.6336336336336337,
+      "top5_accuracy": 0.8708708708708709,
+      "macro_precision": 0.6336628542510896,
+      "macro_recall": 0.6177303927303928,
+      "macro_f1": 0.5938839015494363
+    }
+  },
+  "worst_10_classes": [
+    {
+      "label": "letter_Baa",
+      "n": 12,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Dda",
+      "n": 15,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Kaa",
+      "n": 8,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Laa",
+      "n": 6,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Ooo",
+      "n": 6,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Uuu",
+      "n": 8,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Eyo",
+      "n": 7,
+      "recall": 0.14285714285714285
+    },
+    {
+      "label": "digit_6",
+      "n": 21,
+      "recall": 0.19047619047619047
+    },
+    {
+      "label": "digit_0",
+      "n": 27,
+      "recall": 0.2222222222222222
+    },
+    {
+      "label": "letter_Uyo",
+      "n": 8,
+      "recall": 0.25
+    }
+  ],
+  "best_10_classes": [
+    {
+      "label": "water_bucket",
+      "n": 42,
+      "recall": 1.0
+    },
+    {
+      "label": "twin_baby",
+      "n": 41,
+      "recall": 1.0
+    },
+    {
+      "label": "sugar",
+      "n": 46,
+      "recall": 1.0
+    },
+    {
+      "label": "spectacles",
+      "n": 41,
+      "recall": 1.0
+    },
+    {
+      "label": "relatives",
+      "n": 42,
+      "recall": 1.0
+    },
+    {
+      "label": "potato",
+      "n": 39,
+      "recall": 1.0
+    },
+    {
+      "label": "pineapple",
+      "n": 43,
+      "recall": 1.0
+    },
+    {
+      "label": "mirror",
+      "n": 50,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_Tta",
+      "n": 5,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_Sha",
+      "n": 7,
+      "recall": 1.0
+    }
+  ],
+  "worst_15_classes_in_app": [
+    {
+      "label": "letter_Dda",
+      "n": 15,
+      "recall_in_app": 0.0,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Kaa",
+      "n": 8,
+      "recall_in_app": 0.0,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Laa",
+      "n": 6,
+      "recall_in_app": 0.0,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Ooo",
+      "n": 6,
+      "recall_in_app": 0.0,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Uuu",
+      "n": 8,
+      "recall_in_app": 0.0,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Eyo",
+      "n": 7,
+      "recall_in_app": 0.14285714285714285,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Baa",
+      "n": 12,
+      "recall_in_app": 0.16666666666666666,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Uyo",
+      "n": 8,
+      "recall_in_app": 0.25,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Jaa",
+      "n": 9,
+      "recall_in_app": 0.3333333333333333,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Chha",
+      "n": 16,
+      "recall_in_app": 0.375,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Chandra",
+      "n": 12,
+      "recall_in_app": 0.4166666666666667,
+      "category": "letter"
+    },
+    {
+      "label": "letter_Jha",
+      "n": 11,
+      "recall_in_app": 0.45454545454545453,
+      "category": "letter"
+    },
+    {
+      "label": "chips",
+      "n": 46,
+      "recall_in_app": 0.45652173913043476,
+      "category": "word"
+    },
+    {
+      "label": "sisters_husband",
+      "n": 51,
+      "recall_in_app": 0.49019607843137253,
+      "category": "word"
+    },
+    {
+      "label": "sister",
+      "n": 43,
+      "recall_in_app": 0.5813953488372093,
+      "category": "word"
+    }
+  ],
+  "unrecognizable_in_app": [
+    "letter_Dda",
+    "letter_Kaa",
+    "letter_Laa",
+    "letter_Ooo",
+    "letter_Uuu"
+  ]
+}

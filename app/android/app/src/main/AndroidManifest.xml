@@ -1,0 +1,99 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- For the SOS setup screen's "pick from contacts" button
+         (flutter_contacts' native picker) only. Unlike iOS, Android's
+         native contact picker still requires this permission and throws
+         if it's missing; nothing else in the app reads contacts at all. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <uses-feature android:name="android.hardware.camera" android:required="true"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+    <uses-feature android:name="android.hardware.microphone" android:required="true"/>
+    <application
+        android:label="SignBridge"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="userPortrait">
+            <!-- Locked natively as well as in Dart (main.dart's
+                 SystemChrome.setPreferredOrientations): the native splash
+                 theme is visible before the Flutter engine attaches and
+                 runs that call, so without this the OS could still briefly
+                 honour a landscape rotation during that window. userPortrait
+                 (not plain "portrait") still respects the user's own
+                 upside-down-portrait rotation lock setting, matching what
+                 the Dart-side portraitUp+portraitDown pair allows. -->
+            <!-- Specifies an Android theme to apply to this Activity as soon as
+                 the Android process has started. This theme is visible to the user
+                 while the Flutter UI initializes. After that, this theme continues
+                 to determine the Window background behind the Flutter UI. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+    <!-- Required to query activities that can process text, see:
+         https://developer.android.com/training/package-visibility and
+         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
+
+         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Android 11+ (API 30+) hides installed TTS engine packages from
+             every app by default (package visibility) unless the app
+             declares this query: without it, flutter_tts's calls
+             (isLanguageAvailable, speak, ...) can silently find no engine
+             and no-op, with no exception to catch. This exact block is
+             flutter_tts's own example app's fix for that; it was missing
+             here, which is the most likely reason Speak stopped producing
+             any audio on some devices. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <!-- Same package-visibility issue, for speech_to_text's Listen tab
+             recognizer: also flutter_tts/speech_to_text's own documented
+             fix, not previously applied here. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <!-- Same package-visibility issue again, this time for the SOS
+             feature's pre-filled SMS (sos_service.dart's launchPrefilledSms,
+             via url_launcher). Without this, launchUrl('sms:...') has no
+             visibility into which app handles the sms: scheme on Android
+             11+ and silently fails to open one; the SOS alert would still
+             sound, but "opens a text message" would just not happen, with
+             no exception to report why. Declaring both the scheme
+             url_launcher's own docs recommend (sms) and the alternate one
+             some OEM messaging apps register under (smsto) rather than
+             guessing which one a given device needs. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="sms" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto" />
+        </intent>
+    </queries>
+</manifest>

@@ -1,0 +1,245 @@
+{
+  "language": "asl",
+  "n_val": 27691,
+  "n_classes": 286,
+  "overall": {
+    "accuracy": 0.6124733667978766,
+    "top5_accuracy": 0.8490845401032826,
+    "chance": 0.0034965034965034965,
+    "macro_precision": 0.6286548657718075,
+    "macro_recall": 0.6148759284280522,
+    "macro_f1": 0.6068326040624628,
+    "weighted_precision": 0.6218685288141481,
+    "weighted_recall": 0.6124733667978766,
+    "weighted_f1": 0.6021745839945948
+  },
+  "by_category": {
+    "word": {
+      "n": 25102,
+      "n_classes": 250,
+      "accuracy": 0.5734602820492392,
+      "accuracy_in_app_masked": 0.5734602820492392,
+      "top5_accuracy": 0.8338379411999044,
+      "macro_precision": 0.5767358226511199,
+      "macro_recall": 0.5608525867383842,
+      "macro_f1": 0.5517292656049715
+    },
+    "digit": {
+      "n": 734,
+      "n_classes": 10,
+      "accuracy": 0.9959128065395095,
+      "accuracy_in_app_masked": 0.9986376021798365,
+      "top5_accuracy": 0.9986376021798365,
+      "macro_precision": 1.0,
+      "macro_recall": 0.9963736263736264,
+      "macro_f1": 0.9981694644284573
+    },
+    "letter": {
+      "n": 1855,
+      "n_classes": 26,
+      "accuracy": 0.9886792452830189,
+      "accuracy_in_app_masked": 0.9897574123989218,
+      "top5_accuracy": 0.9962264150943396,
+      "macro_precision": 0.9907980306453291,
+      "macro_recall": 0.9876012531573297,
+      "macro_f1": 0.9890951406838298
+    }
+  },
+  "worst_10_classes": [
+    {
+      "label": "go",
+      "n": 82,
+      "recall": 0.024390243902439025
+    },
+    {
+      "label": "after",
+      "n": 67,
+      "recall": 0.029850746268656716
+    },
+    {
+      "label": "tongue",
+      "n": 110,
+      "recall": 0.045454545454545456
+    },
+    {
+      "label": "there",
+      "n": 85,
+      "recall": 0.08235294117647059
+    },
+    {
+      "label": "penny",
+      "n": 121,
+      "recall": 0.12396694214876033
+    },
+    {
+      "label": "give",
+      "n": 72,
+      "recall": 0.125
+    },
+    {
+      "label": "fast",
+      "n": 79,
+      "recall": 0.12658227848101267
+    },
+    {
+      "label": "listen",
+      "n": 129,
+      "recall": 0.13178294573643412
+    },
+    {
+      "label": "puppy",
+      "n": 91,
+      "recall": 0.14285714285714285
+    },
+    {
+      "label": "kitty",
+      "n": 124,
+      "recall": 0.16129032258064516
+    }
+  ],
+  "best_10_classes": [
+    {
+      "label": "letter_V",
+      "n": 71,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_T",
+      "n": 86,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_Q",
+      "n": 77,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_P",
+      "n": 85,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_M",
+      "n": 62,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_L",
+      "n": 49,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_K",
+      "n": 77,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_G",
+      "n": 69,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_F",
+      "n": 88,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_C",
+      "n": 79,
+      "recall": 1.0
+    }
+  ],
+  "worst_15_classes_in_app": [
+    {
+      "label": "go",
+      "n": 82,
+      "recall_in_app": 0.024390243902439025,
+      "category": "word"
+    },
+    {
+      "label": "after",
+      "n": 67,
+      "recall_in_app": 0.029850746268656716,
+      "category": "word"
+    },
+    {
+      "label": "tongue",
+      "n": 110,
+      "recall_in_app": 0.045454545454545456,
+      "category": "word"
+    },
+    {
+      "label": "there",
+      "n": 85,
+      "recall_in_app": 0.08235294117647059,
+      "category": "word"
+    },
+    {
+      "label": "penny",
+      "n": 121,
+      "recall_in_app": 0.12396694214876033,
+      "category": "word"
+    },
+    {
+      "label": "give",
+      "n": 72,
+      "recall_in_app": 0.125,
+      "category": "word"
+    },
+    {
+      "label": "fast",
+      "n": 79,
+      "recall_in_app": 0.12658227848101267,
+      "category": "word"
+    },
+    {
+      "label": "listen",
+      "n": 129,
+      "recall_in_app": 0.13178294573643412,
+      "category": "word"
+    },
+    {
+      "label": "puppy",
+      "n": 91,
+      "recall_in_app": 0.14285714285714285,
+      "category": "word"
+    },
+    {
+      "label": "kitty",
+      "n": 124,
+      "recall_in_app": 0.16129032258064516,
+      "category": "word"
+    },
+    {
+      "label": "mouth",
+      "n": 104,
+      "recall_in_app": 0.16346153846153846,
+      "category": "word"
+    },
+    {
+      "label": "face",
+      "n": 83,
+      "recall_in_app": 0.18072289156626506,
+      "category": "word"
+    },
+    {
+      "label": "owie",
+      "n": 94,
+      "recall_in_app": 0.19148936170212766,
+      "category": "word"
+    },
+    {
+      "label": "cereal",
+      "n": 108,
+      "recall_in_app": 0.19444444444444445,
+      "category": "word"
+    },
+    {
+      "label": "cheek",
+      "n": 106,
+      "recall_in_app": 0.19811320754716982,
+      "category": "word"
+    }
+  ],
+  "unrecognizable_in_app": []
+}

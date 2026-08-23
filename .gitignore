@@ -1,0 +1,21 @@
+# Raw training datasets: too large for version control, and some carry
+# licenses that restrict redistribution (see docs/PROJECT_REPORT.md, 6.3).
+# Trained model artifacts under ml/models/ are kept; only the raw source
+# data is excluded.
+/ml/data/
+# Precomputed dataset-loading cache (multi-gigabyte .npz arrays) and the
+# downloaded MediaPipe model asset used at dev/training time -- both are
+# regenerable/redownloadable, neither is original project content.
+/ml/.cache/
+/ml/.models/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS/editor cruft
+.DS_Store
+.idea/
+*.iml

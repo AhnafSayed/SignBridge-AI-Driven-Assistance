@@ -1,0 +1,14 @@
+{
+  "theirs_only": {
+    "theirs_held_out": 0.6759358048439026,
+    "ours_held_out": 0.16617725789546967
+  },
+  "ours_only": {
+    "theirs_held_out": 0.3967914581298828,
+    "ours_held_out": 0.9470101594924927
+  },
+  "merged": {
+    "theirs_held_out": 0.8106951713562012,
+    "ours_held_out": 0.9516817927360535
+  }
+}

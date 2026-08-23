@@ -1,0 +1,152 @@
+{
+  "language": "bdsl",
+  "n_val": 3257,
+  "n_classes": 107,
+  "overall": {
+    "accuracy": 0.828676696346331,
+    "top5_accuracy": 0.9576297206017808,
+    "chance": 0.009345794392523364,
+    "macro_precision": 0.7570681079564133,
+    "macro_recall": 0.7592905042038043,
+    "macro_f1": 0.7425338742728935,
+    "weighted_precision": 0.8400953903329619,
+    "weighted_recall": 0.828676696346331,
+    "weighted_f1": 0.8229467315860968
+  },
+  "by_category": {
+    "word": {
+      "n": 2710,
+      "n_classes": 60,
+      "accuracy": 0.8675276752767528,
+      "accuracy_in_app_masked": 0.8675276752767528,
+      "top5_accuracy": 0.9649446494464945,
+      "macro_precision": 0.8749855192597743,
+      "macro_recall": 0.8708466930508987,
+      "macro_f1": 0.8655455268683754
+    },
+    "digit": {
+      "n": 214,
+      "n_classes": 10,
+      "accuracy": 0.719626168224299,
+      "accuracy_in_app_masked": 0.9906542056074766,
+      "top5_accuracy": 0.9953271028037384,
+      "macro_precision": 0.8960000000000001,
+      "macro_recall": 0.6954844415815181,
+      "macro_f1": 0.7627726025620762
+    },
+    "letter": {
+      "n": 333,
+      "n_classes": 37,
+      "accuracy": 0.5825825825825826,
+      "accuracy_in_app_masked": 0.6186186186186187,
+      "top5_accuracy": 0.8738738738738738,
+      "macro_precision": 0.6314470682117741,
+      "macro_recall": 0.5956334581334581,
+      "macro_f1": 0.585052666222743
+    }
+  },
+  "worst_10_classes": [
+    {
+      "label": "digit_8",
+      "n": 14,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Baa",
+      "n": 12,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Eyo",
+      "n": 7,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Haa",
+      "n": 8,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Kaa",
+      "n": 8,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Laa",
+      "n": 6,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Ooo",
+      "n": 6,
+      "recall": 0.0
+    },
+    {
+      "label": "letter_Uuu",
+      "n": 8,
+      "recall": 0.125
+    },
+    {
+      "label": "letter_Ddha",
+      "n": 14,
+      "recall": 0.14285714285714285
+    },
+    {
+      "label": "letter_Chha",
+      "n": 16,
+      "recall": 0.3125
+    }
+  ],
+  "best_10_classes": [
+    {
+      "label": "twin_baby",
+      "n": 41,
+      "recall": 1.0
+    },
+    {
+      "label": "sugar",
+      "n": 46,
+      "recall": 1.0
+    },
+    {
+      "label": "spectacles",
+      "n": 41,
+      "recall": 1.0
+    },
+    {
+      "label": "relatives",
+      "n": 42,
+      "recall": 1.0
+    },
+    {
+      "label": "potato",
+      "n": 39,
+      "recall": 1.0
+    },
+    {
+      "label": "pineapple",
+      "n": 43,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_Tha",
+      "n": 7,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_Sha",
+      "n": 7,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_Ree",
+      "n": 1,
+      "recall": 1.0
+    },
+    {
+      "label": "letter_Pha",
+      "n": 10,
+      "recall": 1.0
+    }
+  ]
+}
