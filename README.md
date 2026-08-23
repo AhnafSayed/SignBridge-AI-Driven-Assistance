@@ -44,8 +44,7 @@ The full numbers, including what did not work and why, are in the project report
 SignBridge/
   app/     Flutter Android application
   ml/      Python training and evaluation pipeline
-  design/  Icon and splash artwork source
-  docs/    Generated figures and supplementary technical notes
+  docs/    Supplementary technical notes
 ```
 
 The `ml/data` folder, which holds the raw training datasets, is not included in this repository. Some of those datasets carry licenses that restrict redistribution, and even the ones that do not are too large to reasonably keep in version control. The scripts that expect them, and where to get each dataset, are documented in `ml/README.md`.

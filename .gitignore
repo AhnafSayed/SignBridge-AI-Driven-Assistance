@@ -9,8 +9,11 @@
 /ml/.cache/
 /ml/.models/
 
-# Kept locally, not published to the public repo.
+# Kept locally, not published to the public repo -- these belong to the
+# academic report submission, not the app/ml source itself.
 /docs/PROJECT_REPORT.md
+/docs/figures/
+/design/
 
 # Python
 __pycache__/
