@@ -25,3 +25,8 @@ venv/
 .DS_Store
 .idea/
 *.iml
+
+# Scratch space for building/staging a release APK before it's uploaded
+# to a GitHub release -- the APK itself is a multi-hundred-MB binary that
+# belongs on the releases page, never in version control.
+/release_staging/
