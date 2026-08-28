@@ -56,6 +56,9 @@ dependencies:
   shared_preferences: ^2.5.5
   url_launcher: ^6.3.1
   flutter_contacts: ^2.1.0
+  geolocator: ^14.0.3
+  image_picker: ^1.2.3
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
@@ -91,6 +94,7 @@ flutter:
     - assets/branding/bup_logo.webp
     - assets/dictionary/common_words.txt
     - assets/dictionary/common_words_bn.txt
+    - assets/dictionary_demos/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

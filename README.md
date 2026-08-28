@@ -74,3 +74,5 @@ From there, `ml/README.md` covers dataset setup and the individual training and 
 The code in this repository, the app and the training pipeline, is released under the MIT license, included in `LICENSE`.
 
 This does not extend to the third party datasets the training pipeline is built to use. Those are not included in this repository, and each one carries its own license, which is not always as permissive. Anyone retraining a model with them should check the terms of the specific dataset first.
+
+One exception, because it is genuinely bundled rather than just referenced: the ASL fingerspelling-letter photos shown in the in-app Dictionary (`app/assets/dictionary_demos/asl_letter_*.png`) are drawn from [ASL Hand Alphabet Dataset](https://www.kaggle.com/datasets/shreyagodhani645/asl-hand-alphabet-dataset) by shreyagodhani645 on Kaggle, licensed CC BY 4.0. This paragraph is that license's required attribution.
