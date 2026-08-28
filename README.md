@@ -29,7 +29,9 @@ The Sign tab reads hand shapes through the camera using MediaPipe's hand landmar
 
 The Listen tab does the opposite direction: it transcribes the other person's speech into large on screen text, in either English or Bangla.
 
-A Dictionary tab lets you search and browse every sign the app knows, with a tap to hear it pronounced. Phrases you use often can be saved for one tap reuse, and a set of starter phrases is included for people who have not built up their own history yet. An emergency SOS option is also available: it sounds a repeating alert and opens a pre filled text message to a chosen contact, though sending that message is always left to the user's own final tap, on purpose.
+A Dictionary tab lets you search and browse every sign the app knows, with a tap to hear it pronounced, a demo picture for every letter, digit, and word in both languages, and a short caption describing the handshape. Phrases you use often can be saved for one tap reuse, and a set of starter phrases is included for people who have not built up their own history yet.
+
+An emergency SOS option sounds a repeating alert and lets you reach a chosen contact by text, WhatsApp, or a phone call, with a one-shot location link and an optional profile (name, blood group, allergies, medical conditions, medications, photo) included in the message when set. Sending or calling is always left to the user's own final tap, on purpose, and the profile is entirely optional and stored on the device only.
 
 ## Current model status
 

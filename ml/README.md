@@ -751,3 +751,29 @@ the alphabet dataset above.
 Both were set aside rather than pursued — word-level BdSLW60 (already
 accurate and correctly labeled) was kept instead. Revisit if a properly
 documented version of either surfaces.
+
+## Auxiliary tooling (not part of the training pipeline itself)
+
+**`eval_control_gesture_collision.py`** measures how often the app's
+hands-free backspace gesture (a closed fist with the thumb held out to
+the side) collides with real trained letter/digit poses, by running the
+same geometry the Dart-side `ControlGestureDetector` uses against actual
+extracted training landmarks (`asl_alphabet_landmarks.npz`,
+`asl_digit_landmarks.npz`, and `dataset_bdsl_static.py`'s loader for
+BdSL). This is what the app's own `control_gesture.dart` docstring cites
+for its measured collision rates -- run it again after changing that
+detector's geometry, not just by eye.
+
+**`scripts/render_dictionary_demos_hq.py`** regenerates the in-app
+Dictionary's demo images -- the hand-skeleton diagrams shown for every
+BdSL letter/digit/word and ASL word entry (ASL letters/digits use real
+photos instead; see the main `README.md`'s license section). It
+deliberately does not touch `src/skeleton_render.py`: that module's
+400x400, 3px-line convention is load-bearing for the ASL-letter
+skeleton-image merge experiment above and any other code matching
+Devansh-47's corpus, so a *separate* renderer with its own larger canvas,
+thicker anti-aliased strokes, and a hand scaled to fill most of the frame
+was written instead of parameterizing the shared one. Re-run it if the
+BdSL word/letter/digit or ASL word demo images ever need regenerating
+(a different visual style, a corrected caption, additional glosses once
+more `asl-signs` parquet files are available locally).
