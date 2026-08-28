@@ -26,4 +26,36 @@ void main() {
       expect(() => buildSmsLaunchUri('123', 'test'), returnsNormally);
     });
   });
+
+  group('buildWhatsAppLaunchUri', () {
+    test('strips everything but digits from the number', () {
+      final uri = buildWhatsAppLaunchUri('+1 (555) 123-4567', 'help');
+      expect(uri.toString(), startsWith('https://wa.me/15551234567?'));
+    });
+
+    test('puts the message in the text query parameter, percent-encoded', () {
+      final uri = buildWhatsAppLaunchUri('123', 'Emergency! I need help.');
+      expect(uri.queryParameters['text'], 'Emergency! I need help.');
+      expect(uri.toString(), contains('%20'));
+    });
+
+    test('does not send anything itself -- only builds the URI', () {
+      expect(() => buildWhatsAppLaunchUri('123', 'test'), returnsNormally);
+    });
+  });
+
+  group('buildCallLaunchUri', () {
+    test('uses the tel: scheme with the number as the path', () {
+      final uri = buildCallLaunchUri('+15551234567');
+      expect(uri.scheme, 'tel');
+      expect(uri.path, '+15551234567');
+    });
+
+    test('does not place the call itself -- only builds the URI', () {
+      // Same safety contract as buildSmsLaunchUri: this must never be the
+      // thing that dials. Placing the call is left to the dialer app the
+      // user still has to tap the call button in themselves.
+      expect(() => buildCallLaunchUri('123'), returnsNormally);
+    });
+  });
 }

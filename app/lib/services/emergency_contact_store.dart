@@ -61,4 +61,20 @@ class EmergencyContactStore extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  /// Fully unsets the emergency contact -- distinct from replacing it with
+  /// a different one via [setNumber]/[setContact]. Returns the sheet to
+  /// its "no contact configured" state rather than leaving a stale number
+  /// around that the user no longer wants SOS to text.
+  Future<void> clear() async {
+    _number = '';
+    _name = '';
+    try {
+      await _prefs?.remove(_key);
+      await _prefs?.remove(_nameKey);
+    } catch (e) {
+      debugPrint('EmergencyContactStore: failed to clear: $e');
+    }
+    notifyListeners();
+  }
 }

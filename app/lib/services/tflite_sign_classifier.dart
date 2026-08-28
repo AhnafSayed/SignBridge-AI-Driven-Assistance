@@ -98,7 +98,15 @@ class TfliteSignClassifier implements SignClassifier {
   @override
   void setAllowedCategories(Set<SignCategory> categories) {
     _allowedMask = _labels.map((l) => categories.contains(categoryOf(l))).toList();
+    // Digits and letters are single-hand-trained in both ASL and BdSL (see
+    // _buildTwoHandFrame); only word signs genuinely use a second hand.
+    // The mode toggle already restricts the active category to exactly
+    // one at a time, so "word is not among the allowed categories" is
+    // exactly "the active mode is single-hand-only".
+    _singleHandOnly = !categories.contains(SignCategory.word);
   }
+
+  bool _singleHandOnly = false;
 
   static const int _numLandmarks = 21;
 
@@ -135,7 +143,18 @@ class TfliteSignClassifier implements SignClassifier {
 
   @override
   ClassificationResult? classify(List<Hand> hands) {
-    final valid = hands.where((h) => h.landmarks.length >= _numLandmarks).toList();
+    final detected = hands.where((h) => h.landmarks.length >= _numLandmarks).toList();
+    // In Digits/Letters mode, a second hand in frame (most often the one
+    // holding the phone) is noise, not signal -- feeding it into slot 1
+    // below would re-anchor the normalization origin/scale to the wrong
+    // hand entirely (see _buildTwoHandFrame's "prefer slot 1" comment),
+    // corrupting the one hand that actually matters. Collapsing to the
+    // single most likely signing hand up front matches what training saw
+    // and keeps the segmenter's own motion tracking from being confused by
+    // a hand that was never part of the sign.
+    final valid = _singleHandOnly && detected.length > 1
+        ? [primaryHand(detected)!]
+        : detected;
     if (valid.isEmpty) {
       // Hand left frame -- itself a gesture boundary, since lowering the
       // hand is the most natural way for a signer to finish.

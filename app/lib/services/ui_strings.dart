@@ -32,7 +32,20 @@ const Map<String, String> _bn = {
   'exit_signbridge_title': 'SignBridge থেকে বেরিয়ে যাবেন?',
   'auto_mode': 'অটো মোড',
   'hand_gestures': 'হ্যান্ড-শেপ জেসচার',
-  'app_language': 'অ্যাপের ভাষা: বাংলা',
+  'app_language': 'অ্যাপের ভাষা',
+  'settings': 'সেটিংস',
+  'appearance': 'দৃশ্যরূপ',
+  'theme_system': 'ডিভাইসের সাথে মিলিয়ে',
+  'theme_light': 'হালকা',
+  'theme_dark': 'গাঢ়',
+  'app_language_note':
+      'ক্যামেরা কোন সাইন ভাষা পড়ছে তার থেকে আলাদা -- এটি শুধু অ্যাপের নিজস্ব '
+      'বোতাম ও মেনুর ভাষা।',
+  'recognition': 'শনাক্তকরণ',
+  'auto_mode_on': 'সাইন ধরে রাখলে যোগ হবে, থামলে বলা হবে',
+  'auto_mode_off': 'নিচের বোতাম ব্যবহার করুন',
+  'hand_gestures_on': 'মুঠি (বুড়ো আঙুল বাইরে) / থাম্বস-আপ / থাম্বস-ডাউন বাক্য নিয়ন্ত্রণ করে',
+  'hand_gestures_off': 'ডিলিট / ক্লিয়ার / স্পিক বোতাম ব্যবহার করুন',
 };
 
 /// Looks up [key] in Bangla when [bangla] is true (AppState.uiBangla --

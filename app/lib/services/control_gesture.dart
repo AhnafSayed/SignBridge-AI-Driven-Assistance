@@ -2,14 +2,16 @@ import 'dart:math' as math;
 
 import 'package:hand_landmarker/hand_landmarker.dart';
 
+import 'hand_selection.dart';
+
 /// Non-linguistic hand shapes that control the sentence instead of adding
 /// a word to it. Deliberately just three, all static handshapes (no motion
 /// tracking) so they're cheap to detect every frame and easy for a user to
 /// hold deliberately:
 ///
-///  - closed fist                    -> remove the last word (backspace)
-///  - thumb down, fist otherwise     -> clear the whole sentence
-///  - thumb up, fist otherwise       -> speak the sentence right now
+///  - thumb out to the side, fist otherwise -> remove the last word (backspace)
+///  - thumb down, fist otherwise            -> clear the whole sentence
+///  - thumb up, fist otherwise              -> speak the sentence right now
 ///
 /// No "space" gesture exists on purpose: each auto-committed word already
 /// becomes its own entry in the sentence list, so words come pre-spaced --
@@ -30,8 +32,18 @@ enum ControlGesture { none, backspace, clearAll, speak }
 
 class ControlGestureDetector {
   ControlGesture detect(List<Hand> hands) {
-    if (hands.isEmpty) return ControlGesture.none;
-    final lm = hands.first.landmarks;
+    // These are always one-handed shapes, in either language, so a second
+    // hand in frame (typically the one holding the phone) must never be
+    // what gets read here. Picking whichever hand the plugin happened to
+    // list first was the actual bug behind hands-free gestures failing on
+    // real devices: with two hands almost always in frame for a
+    // phone-camera selfie shot, "first" can consistently mean "the hand
+    // holding the phone", every single frame, rather than an occasional
+    // flicker -- see primaryHand's own doc for why bounding-box size is
+    // the tiebreak instead.
+    final hand = primaryHand(hands);
+    if (hand == null) return ControlGesture.none;
+    final lm = hand.landmarks;
     if (lm.length < 21) return ControlGesture.none;
 
     final fingersUp = [
@@ -80,12 +92,13 @@ class ControlGestureDetector {
     // both trained vocabularies' own static training data, not just one:
     //
     //  - ASL (ml/data/asl_alphabet_landmarks.npz, 26 letters): the
-    //    closed-fist disqualifier above reads as a `backspace` shape for
+    //    closed-fist disqualifier above read as a `backspace` shape for
     //    S 100%, E/Q 99%, M 91%, A 88%, T 77%, O 70%, P 55% of sampled
-    //    poses. An earlier version of this comment reported only A/M/N,
-    //    from having checked those three specifically rather than
-    //    sweeping all 26 -- undercounting the real collision surface by
-    //    more than double.
+    //    poses, under the rule at the time (any non-vertical-thumb fist
+    //    defaults to backspace). An earlier version of this comment
+    //    reported only A/M/N, from having checked those three specifically
+    //    rather than sweeping all 26 -- undercounting the real collision
+    //    surface by more than double.
     //  - BdSL (ml/src/dataset_bdsl_static.py's CSV loader, 37 letters + 10
     //    digits): wider still -- 15 letters and 2 digits exceed 30%
     //    backspace or 15% clear/speak, topped by letter "Taa" at 99%
@@ -118,14 +131,57 @@ class ControlGestureDetector {
     // docstring) exists specifically to bridge that gap, for both
     // languages at once, since it lives in HomeScreenState's arbitration
     // rather than in either language's model.
+    //
+    // A second, later real-device report -- hands-free gestures working in
+    // Words mode but not Letters/Digits -- traced back to this detector,
+    // not the arbitration layer: the numbers above were never actually
+    // fixed at the source, only worked around downstream. "Any
+    // non-vertical-thumb fist defaults to backspace" is, geometrically,
+    // "every fist-shaped letter that isn't deliberately thumbs-up/down",
+    // since a tucked or resting thumb is neither. The fix (below) requires
+    // backspace's thumb to be as clearly *horizontal* as the existing rule
+    // already requires clear/speak's to be *vertical* -- a shape no
+    // fingerspelling letter in either alphabet actually makes -- and lets
+    // an ambiguous/tucked thumb fall through to `none` instead of
+    // defaulting to backspace. Measured the same way as above
+    // (ml/eval_control_gesture_collision.py, run against the same real
+    // training data): ASL letters drop from 30.2% overall backspace
+    // collision to 0.6% (S/E/M: 100%/99%/91% -> 0%/0%/0%; "Q" residual at
+    // 8%), BdSL letters from 29.1% to 0.8%, and both digit sets to
+    // effectively 0%.
     final scale = _dist(lm[0], lm[9]); // wrist -> middle_mcp
-    if (scale < 1e-6) return ControlGesture.backspace;
+    if (scale < 1e-6) return ControlGesture.none;
     final dx = lm[4].x - lm[2].x;
     final dy = lm[4].y - lm[2].y;
     final verticalThumb = dx.abs() < dy.abs() * 0.6 && dy.abs() > scale * 0.75;
-
-    if (!verticalThumb) return ControlGesture.backspace;
-    return dy > 0 ? ControlGesture.clearAll : ControlGesture.speak; // y grows downward
+    // Backspace used to be "any fist whose thumb isn't clearly vertical" --
+    // in effect, the default for every closed-fist shape that wasn't
+    // deliberately thumbs-up/down. That is exactly the geometry of most
+    // fist-shaped letters (thumb tucked or resting, not extended in any
+    // particular direction), which is why real-device testing found
+    // backspace firing on ASL "S"/"E"/"Q"/"M" and similar BdSL letters
+    // instead of on an actual delete attempt -- not a rare edge case but
+    // the *majority* of that shape's real samples (measured in
+    // ml/eval_control_gesture_collision.py: 30.2% of all ASL letter frames
+    // read as backspace under the old rule, topped by "S" at 100% and
+    // "E"/"Q" at 99%).
+    //
+    // Requiring the thumb to be clearly extended *horizontally* instead --
+    // the same math already used for vertical, just the other axis --
+    // asks for a shape no fingerspelling letter in either alphabet
+    // actually makes (a tucked or resting thumb is neither clearly
+    // vertical nor clearly horizontal). Measured against the same real
+    // training data: ASL letters drop to 0.6% overall (0% for "S", "E",
+    // "M"; "Q" residual at 8%), BdSL letters drop to 0.8%, and both
+    // digit sets drop to effectively 0%. An ambiguous/tucked thumb is now
+    // `none` rather than defaulting to backspace, which is the correct
+    // default -- a shape that isn't clearly any of the three control
+    // gestures shouldn't be treated as one just because it also isn't
+    // thumbs-up/down.
+    final horizontalThumb = dy.abs() < dx.abs() * 0.6 && dx.abs() > scale * 0.75;
+    if (verticalThumb) return dy > 0 ? ControlGesture.clearAll : ControlGesture.speak;
+    if (horizontalThumb) return ControlGesture.backspace;
+    return ControlGesture.none;
   }
 
   double _dist(Landmark a, Landmark b) {
@@ -160,6 +216,27 @@ class ControlGestureDetector {
 /// than mid-hold -- is never meaningfully delayed by a 500ms window, since
 /// its own 900ms+ hold requirement outlasts the cooldown comfortably.
 ///
+/// Suppression only ever applies to [ControlGesture.backspace]. An earlier
+/// version suppressed all three gestures uniformly, on the theory that
+/// clearAll/speak (thumb clearly vertical, no other fingers) are "shaped
+/// nothing like any trained letter or digit pose" and were therefore never
+/// really at risk -- true for the geometry, but that reasoning doesn't
+/// hold once wordIsConfident is considered: DirectStaticClassifier (ASL
+/// letters/digits) and TfliteSignClassifier restricted to Letters/Digits
+/// are both single-frame classifiers with no motion-based segmentation
+/// gate the way word recognition has, so they report *some* confident
+/// label on nearly every frame the hand is in view -- including while the
+/// user is deliberately holding a thumbs-up/thumbs-down. Suppressing
+/// clearAll/speak on that confidence made them work in Words mode (where a
+/// held, motionless thumbs-up rarely produces a confident word reading at
+/// all) but intermittently or entirely fail in Letters/Digits mode --
+/// reported on a real device as "thumbs-up sometimes works, sometimes
+/// doesn't, only in Words mode." Restricting suppression to backspace
+/// keeps the one gesture that actually needs it (the fist-shaped-letter
+/// collision this class exists for) protected, while letting clearAll and
+/// speak fire on their own geometry regardless of what the classifier
+/// simultaneously thinks the same frame's handshape looks like.
+///
 /// Pulled out as its own class, taking `now` as an explicit parameter
 /// rather than calling `DateTime.now()` internally, so it is unit-testable
 /// with fabricated timestamps -- the same pattern [GestureSegmenter] and
@@ -171,15 +248,18 @@ class ControlArbiter {
   final Duration suppressCooldown;
   DateTime? _lastConfidentAt;
 
-  /// Returns [ControlGesture.none] if this frame (or a recent one, within
-  /// [suppressCooldown]) was a confident recognition; otherwise returns
-  /// [rawControl] unchanged.
+  /// Returns [ControlGesture.none] if [rawControl] is [ControlGesture.backspace]
+  /// and this frame (or a recent one, within [suppressCooldown]) was a
+  /// confident recognition; otherwise returns [rawControl] unchanged --
+  /// clearAll and speak are never suppressed by word confidence at all,
+  /// see the class doc for why.
   ControlGesture arbitrate({
     required bool wordIsConfident,
     required ControlGesture rawControl,
     required DateTime now,
   }) {
     if (wordIsConfident) _lastConfidentAt = now;
+    if (rawControl != ControlGesture.backspace) return rawControl;
     final recentlyConfident =
         _lastConfidentAt != null && now.difference(_lastConfidentAt!) < suppressCooldown;
     return (wordIsConfident || recentlyConfident) ? ControlGesture.none : rawControl;

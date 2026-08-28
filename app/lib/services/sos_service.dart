@@ -8,9 +8,11 @@ import 'package:url_launcher/url_launcher.dart';
 /// alert plus a vibration pulse, until explicitly stopped.
 ///
 /// Deliberately does not send anything on its own -- see
-/// [buildSmsLaunchUri]'s own comment for why sending is left to a
-/// pre-filled native SMS intent the user still has to tap "send" on,
-/// rather than a silently automatic send.
+/// [buildSmsLaunchUri], [buildWhatsAppLaunchUri], and [buildCallLaunchUri]
+/// for why reaching the contact is always left to a pre-filled native
+/// intent (text, WhatsApp, or the dialer) the user still has to tap
+/// "send" or "call" on themselves, rather than a silently automatic send
+/// or an automatically placed call.
 ///
 /// Uses its own [FlutterTts] instance, separate from the one HomeScreen
 /// uses for normal sentence-speaking, so an SOS alert can't be silently
@@ -75,5 +77,47 @@ Uri buildSmsLaunchUri(String phoneNumber, String message) {
 
 Future<bool> launchPrefilledSms(String phoneNumber, String message) async {
   final uri = buildSmsLaunchUri(phoneNumber, message);
+  return launchUrl(uri);
+}
+
+/// Builds a WhatsApp "click to chat" link with the message pre-filled but
+/// NOT sent -- same reasoning as [buildSmsLaunchUri]: this hands off to
+/// WhatsApp's own compose screen, where sending is still one deliberate
+/// tap away, never an app-triggered side effect.
+///
+/// WhatsApp's click-to-chat spec wants the number as plain digits, country
+/// code included, with no `+`, spaces, dashes, or parentheses -- unlike
+/// `sms:`/`tel:`, which both accept a normally-formatted number. Stripping
+/// everything but digits here means the one number already stored for the
+/// emergency contact (in whatever format the user typed it, or the
+/// contact picker returned it) works for every launcher, without asking
+/// the user to store it twice in two formats.
+Uri buildWhatsAppLaunchUri(String phoneNumber, String message) {
+  final digitsOnly = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
+  final encodedText = Uri.encodeComponent(message);
+  return Uri.parse('https://wa.me/$digitsOnly?text=$encodedText');
+}
+
+Future<bool> launchPrefilledWhatsApp(String phoneNumber, String message) async {
+  final uri = buildWhatsAppLaunchUri(phoneNumber, message);
+  // externalApplication, not the default: an https:// link would otherwise
+  // just as happily open in an in-app browser tab showing wa.me's own
+  // redirect page instead of handing off to the WhatsApp app itself.
+  return launchUrl(uri, mode: LaunchMode.externalApplication);
+}
+
+/// Builds a `tel:` URI that opens the phone's own dialer with the number
+/// already entered -- it does NOT place the call itself. Placing a call
+/// automatically (Android's `CALL_PHONE` permission plus `ACTION_CALL`)
+/// was deliberately not used, for the same reason [buildSmsLaunchUri]
+/// hands off to the messaging app instead of transmitting directly: a
+/// false trigger must never be able to silently start a real phone call
+/// with no chance to cancel, and `tel:` (which resolves to `ACTION_DIAL`)
+/// has never required that permission at all, so this costs the feature
+/// nothing extra to ask the user for.
+Uri buildCallLaunchUri(String phoneNumber) => Uri.parse('tel:$phoneNumber');
+
+Future<bool> launchCall(String phoneNumber) async {
+  final uri = buildCallLaunchUri(phoneNumber);
   return launchUrl(uri);
 }

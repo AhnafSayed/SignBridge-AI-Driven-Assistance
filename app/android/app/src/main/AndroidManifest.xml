@@ -6,6 +6,16 @@
          native contact picker still requires this permission and throws
          if it's missing; nothing else in the app reads contacts at all. -->
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <!-- For the SOS alert only: attaching a one-shot location link to the
+         emergency message. COARSE is requested alongside FINE because a
+         device can grant only the coarse permission; the location lookup
+         itself asks for medium accuracy, which coarse-only already
+         satisfies, so there's no reason to demand FINE outright. Nothing
+         outside SosSheet's own trigger flow ever reads location, and
+         nothing runs in the background: one lookup, at the moment the
+         user taps "Send SOS alert" or a channel button, never on its own. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-feature android:name="android.hardware.camera" android:required="true"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <uses-feature android:name="android.hardware.microphone" android:required="true"/>

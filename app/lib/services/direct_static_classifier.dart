@@ -82,8 +82,13 @@ class DirectStaticClassifier implements SignClassifier {
     }
     // Digits and fingerspelling are one-handed in both ASL and BdSL, so a
     // single detected hand is the whole input -- matches training, which
-    // never saw more than one hand per static sample.
-    final landmarks = hands.first.landmarks;
+    // never saw more than one hand per static sample. When two hands are
+    // in frame (typically the other one is just holding the phone),
+    // primaryHand picks the one actually being held up to sign rather than
+    // whichever the plugin happened to list first -- see its own doc.
+    final hand = primaryHand(hands);
+    if (hand == null) return _latestResult;
+    final landmarks = hand.landmarks;
     if (landmarks.length < _numLandmarks) return _latestResult;
 
     final origin = landmarks[_wrist];

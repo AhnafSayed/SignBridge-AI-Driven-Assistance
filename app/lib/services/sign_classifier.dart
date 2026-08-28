@@ -4,6 +4,8 @@ import 'package:hand_landmarker/hand_landmarker.dart';
 
 import 'sign_category.dart';
 
+export 'hand_selection.dart' show primaryHand;
+
 /// One classification result: a label plus a confidence in [0, 1].
 class ClassificationResult {
   final String label;

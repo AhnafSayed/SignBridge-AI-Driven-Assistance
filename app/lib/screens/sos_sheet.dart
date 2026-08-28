@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 
 import '../app_theme.dart';
 import '../services/emergency_contact_store.dart';
+import '../services/location_service.dart';
 import '../services/sos_service.dart';
+import '../services/user_profile_store.dart';
 
 /// Emergency alert: configure one contact number, then trigger a loud
 /// repeating spoken alert plus a pre-filled text message the user still
@@ -17,16 +19,22 @@ import '../services/sos_service.dart';
 /// should not cost the user their place in an ongoing conversation, in
 /// exactly the moment they may most need it to keep working.
 class SosSheet extends StatefulWidget {
-  const SosSheet({super.key});
+  const SosSheet({super.key, this.startInEditing = false});
 
-  static Future<void> show(BuildContext context) {
+  /// Opens straight into "set/change contact" instead of the alert
+  /// trigger screen -- used by the profile screen's own "Emergency
+  /// contact" shortcut, so setting it up doesn't require first opening
+  /// the alert screen and then finding the edit option inside it.
+  final bool startInEditing;
+
+  static Future<void> show(BuildContext context, {bool startInEditing = false}) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       isDismissible: false, // an active alert should not vanish on a stray tap outside it
       enableDrag: false,
-      builder: (_) => const SosSheet(),
+      builder: (_) => SosSheet(startInEditing: startInEditing),
     );
   }
 
@@ -35,14 +43,22 @@ class SosSheet extends StatefulWidget {
 }
 
 class _SosSheetState extends State<SosSheet> {
+  static const _alertMessage = 'Emergency. I need help. This message was sent from SignBridge.';
+
   final _controller = TextEditingController();
   final _sos = SosService();
   bool _active = false;
-  bool _editing = false;
+  late bool _editing;
   // Set only by the contact picker, and cleared the moment the user
   // types in the number field by hand -- a name saved alongside a number
   // the user then changed manually would silently mislabel it.
   String? _pickedName;
+
+  @override
+  void initState() {
+    super.initState();
+    _editing = widget.startInEditing;
+  }
 
   @override
   void dispose() {
@@ -103,10 +119,11 @@ class _SosSheetState extends State<SosSheet> {
                         const SizedBox(height: 6),
                         const Text(
                           'When you trigger an SOS alert, this app sounds a repeating '
-                          'spoken alert and opens a text message to this number with an '
-                          'emergency message already filled in -- you still tap send '
-                          'yourself. Nothing is sent automatically, and this number '
-                          'stays on this device only.',
+                          'spoken alert, and lets you reach this number by text, '
+                          'WhatsApp, or a phone call with an emergency message -- and a '
+                          'map link to your current location, if you allow it -- already '
+                          'filled in. You still tap send or call yourself, nothing is '
+                          'sent automatically, and this number stays on this device only.',
                           style: TextStyle(color: AppColors.inkSoft, height: 1.45, fontSize: 12.5),
                         ),
                       ],
@@ -250,9 +267,22 @@ class _SosSheetState extends State<SosSheet> {
                 Expanded(
                   child: Text('Emergency SOS', style: Theme.of(context).textTheme.titleLarge),
                 ),
-                TextButton(
-                  onPressed: () => setState(() => _editing = true),
-                  child: const Text('Change contact'),
+                PopupMenuButton<String>(
+                  tooltip: 'Contact options',
+                  onSelected: (value) {
+                    if (value == 'change') {
+                      setState(() => _editing = true);
+                    } else if (value == 'remove') {
+                      _confirmAndRemoveContact(store);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: 'change', child: Text('Change contact')),
+                    PopupMenuItem(
+                      value: 'remove',
+                      child: Text('Remove contact', style: TextStyle(color: AppColors.coral)),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -265,8 +295,10 @@ class _SosSheetState extends State<SosSheet> {
             if (!_active) ...[
               Text(
                 'This will sound a repeating spoken alert on this phone and open '
-                'a text message to your contact with an emergency message ready '
-                'to send. Nothing is sent until you tap send yourself.',
+                'a text message to your contact with an emergency message -- and '
+                'your current location, if you allow it -- ready to send. Nothing '
+                'is sent until you tap send yourself, and once the alert is '
+                'active you can also reach them by WhatsApp or call.',
                 style: TextStyle(color: AppColors.inkSoft, height: 1.5),
               ),
               const SizedBox(height: 16),
@@ -288,6 +320,41 @@ class _SosSheetState extends State<SosSheet> {
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: Text('🚨 Alert active 🚨', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Reach ${store.name.isNotEmpty ? store.name : 'your contact'} whichever way '
+                'works right now -- each just opens that app with the number or message '
+                'ready; you still send or call yourself.',
+                style: TextStyle(color: AppColors.inkSoft, height: 1.4, fontSize: 12.5),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _sendText(store),
+                      icon: const Icon(Icons.sms_outlined, size: 18),
+                      label: const Text('Text'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _sendWhatsApp(store),
+                      icon: const Icon(Icons.chat_outlined, size: 18),
+                      label: const Text('WhatsApp'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => launchCall(store.number),
+                      icon: const Icon(Icons.call_outlined, size: 18),
+                      label: const Text('Call'),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               SizedBox(
@@ -318,6 +385,37 @@ class _SosSheetState extends State<SosSheet> {
     );
   }
 
+  /// Fully unsets the emergency contact, distinct from "Change contact"
+  /// (which keeps one configured, just a different number). Confirmed
+  /// first since it's the one action here that leaves SOS unusable until
+  /// a new contact is set again.
+  Future<void> _confirmAndRemoveContact(EmergencyContactStore store) async {
+    if (_active) await _sos.stop();
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove emergency contact?'),
+        content: Text(
+          'SOS will have no contact to alert until you set a new one. '
+          '${store.name.isNotEmpty ? store.name : store.number} will be removed.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.coral),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await store.clear();
+      if (mounted) setState(() => _active = false);
+    }
+  }
+
   Future<void> _confirmAndTrigger(EmergencyContactStore store) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -325,7 +423,8 @@ class _SosSheetState extends State<SosSheet> {
         title: const Text('Send emergency alert?'),
         content: Text(
           'This sounds a repeating alert on your phone and opens a text message '
-          'to ${store.number} with an emergency message ready to send.',
+          'to ${store.number} with an emergency message ready to send. Once active, '
+          'you can also reach them by WhatsApp or a phone call from this screen.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
@@ -340,9 +439,40 @@ class _SosSheetState extends State<SosSheet> {
     if (confirmed != true) return;
     await _sos.start();
     if (mounted) setState(() => _active = true);
-    await launchPrefilledSms(
-      store.number,
-      'Emergency. I need help. This message was sent from SignBridge.',
-    );
+    await _sendText(store);
+  }
+
+  /// Builds the emergency message: the base alert text, the user's own
+  /// name and medical information if they've filled in a profile (see
+  /// ProfileDrawer), and a one-shot Google Maps link if a location fix is
+  /// available -- see [currentLocationLinkOrNull]'s own doc for why a
+  /// missing fix falls back to the plain message instead of blocking the
+  /// send. Location is fetched fresh on every send rather than once when
+  /// the alert starts: a location captured when the sheet opened could be
+  /// meaningfully stale by the time a contact actually gets reached, and
+  /// in a real emergency, stale is worse than a few extra seconds' wait
+  /// for a current fix. Name/medical info don't need the same freshness
+  /// concern -- they change rarely, so reading whatever's currently saved
+  /// is enough.
+  Future<String> _composeMessage() async {
+    final profile = context.read<UserProfileStore>();
+    var message = _alertMessage;
+    if (profile.name.isNotEmpty) message = '$message\nFrom: ${profile.name}';
+    if (profile.bloodGroup.isNotEmpty) message = '$message\nBlood group: ${profile.bloodGroup}';
+    if (profile.allergies.isNotEmpty) message = '$message\nAllergies: ${profile.allergies}';
+    if (profile.conditions.isNotEmpty) message = '$message\nMedical conditions: ${profile.conditions}';
+    if (profile.medications.isNotEmpty) message = '$message\nMedications: ${profile.medications}';
+    final link = await currentLocationLinkOrNull();
+    return appendLocationLink(message, link);
+  }
+
+  Future<void> _sendText(EmergencyContactStore store) async {
+    final message = await _composeMessage();
+    await launchPrefilledSms(store.number, message);
+  }
+
+  Future<void> _sendWhatsApp(EmergencyContactStore store) async {
+    final message = await _composeMessage();
+    await launchPrefilledWhatsApp(store.number, message);
   }
 }

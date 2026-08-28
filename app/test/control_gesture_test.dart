@@ -5,17 +5,36 @@ import 'package:sign_bridge/services/control_gesture.dart';
 /// Verifies the hands-free control gestures (backspace/clearAll/speak)
 /// against both real and synthetic landmark data.
 ///
-/// The two closed-fist cases below are copied verbatim from this
-/// project's own extracted training data (`ml/data/asl_alphabet_landmarks
-/// .npz`'s letter "S", and `ml/data/asl_digit_landmarks.npz`'s digit "0"),
-/// not invented -- they're the concrete evidence behind a real bug found
-/// and fixed in `control_gesture.dart`: the previous thumb-extension
-/// check (`dist(thumb_tip, wrist) > dist(index_mcp, pinky_mcp) * 0.9`)
-/// came out *true* for essentially every real closed-fist hand shape
-/// (checked directly against this same data), which made backspace
-/// effectively unreachable -- any closed fist fell through to clearAll or
-/// speak depending on incidental thumb position, never backspace. Both
-/// real samples below are regression tests for that exact fix.
+/// The closed-fist cases below are copied verbatim from this project's
+/// own extracted training data (`ml/data/asl_alphabet_landmarks.npz`'s
+/// letter "S", `ml/data/asl_digit_landmarks.npz`'s digit "0", and BdSL's
+/// letter "Taa"/digit "6" CSVs) -- concrete evidence behind two real bugs
+/// found and fixed in `control_gesture.dart`, in two rounds:
+///
+/// Round 1 fixed thumb *extension* detection (the previous check,
+/// `dist(thumb_tip, wrist) > dist(index_mcp, pinky_mcp) * 0.9`, came out
+/// true for essentially every closed fist, making backspace unreachable
+/// at all).
+///
+/// Round 2 fixed thumb *direction*: the fixed detector still defaulted
+/// any non-vertical-thumb fist to backspace, which is exactly the
+/// geometry of most fist-shaped letters (a tucked or resting thumb is
+/// neither vertical nor any other particular direction) -- measured at a
+/// 30.2% ASL / 29.1% BdSL letter backspace-collision rate
+/// (`ml/eval_control_gesture_collision.py`). Backspace now requires a
+/// clearly *horizontal* thumb, symmetric with clear/speak's existing
+/// vertical requirement; an ambiguous/tucked thumb is `none` instead.
+/// The four real samples below (S, digit 0, Taa, digit 6) are regression
+/// tests for that fix -- none of them are genuine backspace attempts, so
+/// none of them should read as one.
+///
+/// Round 3 fixed *which hand* gets read at all: `detect` used to read
+/// `hands.first`, whichever hand the plugin happened to list first. On a
+/// real phone-camera selfie shot a second hand -- the one holding the
+/// phone -- is in frame almost continuously, not occasionally, so this
+/// wasn't an edge case: hands-free gestures went completely dead on real
+/// devices because the "first" hand was consistently the wrong one. See
+/// the two-hands test below.
 void main() {
   final detector = ControlGestureDetector();
 
@@ -26,7 +45,7 @@ void main() {
     expect(detector.detect([]), ControlGesture.none);
   });
 
-  test('real letter "S" landmarks (closed fist, thumb across front) -> backspace', () {
+  test('real letter "S" landmarks (closed fist, thumb across front) -> none, not backspace', () {
     final s = hand([
       [0.3773, 0.6722, -0.0000],
       [0.5080, 0.5818, -0.0512],
@@ -50,10 +69,10 @@ void main() {
       [0.3002, 0.4618, -0.0528],
       [0.3107, 0.4737, -0.0381],
     ]);
-    expect(detector.detect([s]), ControlGesture.backspace);
+    expect(detector.detect([s]), ControlGesture.none);
   });
 
-  test('real ASL digit "0" landmarks (closed circle/O shape) -> backspace', () {
+  test('real ASL digit "0" landmarks (closed circle/O shape) -> none, not backspace', () {
     final zero = hand([
       [0.4072, 0.3080, 0.0000],
       [0.5182, 0.3817, 0.0049],
@@ -77,21 +96,18 @@ void main() {
       [0.8482, 0.3703, -0.0553],
       [0.8423, 0.4426, -0.0600],
     ]);
-    expect(detector.detect([zero]), ControlGesture.backspace);
+    expect(detector.detect([zero]), ControlGesture.none);
   });
 
   // The control gestures run identically for BdSL -- ControlGestureDetector
   // and ControlArbiter are language-agnostic geometry over raw landmarks,
   // with no ASL/BdSL branch anywhere in either class. A full sweep of
   // BdSL's own static digit/letter CSV landmarks (ml/src/dataset_bdsl_static
-  // .py's loader) found the same collision, wider if anything: 15 of 37
-  // letters and 2 of 10 digits exceed a 30% backspace or 15% clear/speak
-  // rate, topped by letter "Taa" at 99% backspace and digit "6" at 31%
-  // backspace *and* 30% clear/speak (clearAll is the more damaging
-  // failure of the two -- it erases the whole sentence, not just the last
-  // word). Both real samples below are drawn from that measurement, not
-  // invented, mirroring the ASL regression tests above.
-  test('real BdSL letter "Taa" landmarks (closed fist) -> backspace', () {
+  // .py's loader) found the same collision under the old rule, wider if
+  // anything: letter "Taa" at 99% backspace, overall letters at 29.1%.
+  // Both real samples below are drawn from that same measurement,
+  // re-checked against the fixed detector.
+  test('real BdSL letter "Taa" landmarks (closed fist) -> none, not backspace', () {
     final taa = hand([
       [0.4872, 0.7416, -0.0001],
       [0.3859, 0.6682, -0.0914],
@@ -115,10 +131,10 @@ void main() {
       [0.5898, 0.4832, -0.1846],
       [0.5774, 0.5321, -0.1600],
     ]);
-    expect(detector.detect([taa]), ControlGesture.backspace);
+    expect(detector.detect([taa]), ControlGesture.none);
   });
 
-  test('real BdSL digit "6" landmarks -> speak (the clear/speak collision case)', () {
+  test('real BdSL digit "6" landmarks -> speak (a residual clear/speak collision, unaffected by the backspace fix)', () {
     final six = hand([
       [0.3846, 0.6771, 0.0000],
       [0.3895, 0.5163, -0.0503],
@@ -197,9 +213,67 @@ void main() {
     expect(detector.detect([hand(coords)]), ControlGesture.none);
   });
 
-  test('degenerate/zero-scale landmarks -> backspace, not a crash', () {
+  test('closed fist, thumb extended straight out to the side -> backspace', () {
+    // The new intended backspace gesture: thumb clearly horizontal rather
+    // than "not vertical". Same curled-fingers base as the thumbs-up/down
+    // cases above (thumbTipY is a placeholder here, immediately
+    // overwritten by the horizontal thumb coordinates on the next lines).
+    final coords = curledFistWithThumb(0.55);
+    coords[2] = [0.43, 0.55, 0.0]; // thumb_mcp
+    coords[3] = [0.30, 0.55, 0.0]; // thumb_ip
+    coords[4] = [0.18, 0.55, 0.0]; // thumb_tip, well left of mcp, same y
+    expect(detector.detect([hand(coords)]), ControlGesture.backspace);
+  });
+
+  test('degenerate/zero-scale landmarks -> none, not a crash', () {
     final degenerate = hand(List.generate(21, (_) => [0.5, 0.5, 0.0]));
-    expect(detector.detect([degenerate]), ControlGesture.backspace);
+    expect(detector.detect([degenerate]), ControlGesture.none);
+  });
+
+  test('two hands: a small incidental second hand must not override the primary one', () {
+    final primary = hand(curledFistWithThumb(0.30)); // large, clear thumbs-up -> speak
+    // A much smaller hand elsewhere in frame -- standing in for the hand
+    // actually holding the phone during a real selfie-camera shot -- shaped
+    // so that, read on its own, it would land on a *different* gesture
+    // (backspace). This is what proves the guard actually picks the right
+    // hand rather than happening to agree by coincidence.
+    final incidental = hand([
+      [0.10, 0.12, 0.0], // 0 wrist
+      [0.0925, 0.108, 0.0], // 1 thumb_cmc
+      [0.0895, 0.0975, 0.0], // 2 thumb_mcp
+      [0.0645, 0.0975, 0.0], // 3 thumb_ip
+      [0.0395, 0.0975, 0.0], // 4 thumb_tip -- clearly horizontal: backspace-shaped
+      [0.1075, 0.09, 0.0], // 5 index_mcp
+      [0.1075, 0.078, 0.0], // 6 index_pip
+      [0.1075, 0.081, 0.0], // 7 index_dip
+      [0.1075, 0.084, 0.0], // 8 index_tip (curled)
+      [0.103, 0.087, 0.0], // 9 middle_mcp
+      [0.115, 0.075, 0.0], // 10 middle_pip
+      [0.115, 0.078, 0.0], // 11 middle_dip
+      [0.115, 0.081, 0.0], // 12 middle_tip (curled)
+      [0.1195, 0.09, 0.0], // 13 ring_mcp
+      [0.1225, 0.078, 0.0], // 14 ring_pip
+      [0.1225, 0.081, 0.0], // 15 ring_dip
+      [0.1225, 0.084, 0.0], // 16 ring_tip (curled)
+      [0.127, 0.0945, 0.0], // 17 pinky_mcp
+      [0.13, 0.084, 0.0], // 18 pinky_pip
+      [0.13, 0.087, 0.0], // 19 pinky_dip
+      [0.13, 0.09, 0.0], // 20 pinky_tip (curled)
+    ]);
+
+    // In isolation, the small hand alone reads as backspace -- confirming
+    // this is a genuine, not contrived, competing shape.
+    expect(detector.detect([incidental]), ControlGesture.backspace);
+
+    // With both in frame, the small incidental hand must never win,
+    // regardless of which order the plugin happens to list them in. Before
+    // the primaryHand fix, `detect([incidental, primary])` read
+    // `hands.first` and returned `backspace` here -- exactly the failure
+    // mode reported as "hands-free gestures don't work at all" on a real
+    // phone-camera shot, where a second hand is in frame almost
+    // continuously.
+    expect(detector.detect([primary, incidental]), ControlGesture.speak);
+    expect(detector.detect([incidental, primary]), ControlGesture.speak);
   });
 
   controlArbiterTests();
@@ -216,7 +290,7 @@ void controlArbiterTests() {
   group('ControlArbiter', () {
     final base = DateTime(2026, 1, 1, 12, 0, 0);
 
-    test('confident frame always suppresses control, regardless of raw reading', () {
+    test('confident frame suppresses backspace', () {
       final arbiter = ControlArbiter();
       final result = arbiter.arbitrate(
         wordIsConfident: true,
@@ -224,6 +298,26 @@ void controlArbiterTests() {
         now: base,
       );
       expect(result, ControlGesture.none);
+    });
+
+    test('confident frame never suppresses clearAll or speak', () {
+      // A real device report: thumbs-up/down worked in Words mode but not
+      // in Letters/Digits, because the static letter/digit classifiers
+      // report *some* confident label on nearly every frame (no
+      // motion-based segmentation gate the way word recognition has),
+      // even while the user deliberately holds a thumbs-up. Only
+      // backspace has a genuine collision risk with real trained poses
+      // (see the class doc) -- clearAll/speak must fire on their own
+      // geometry regardless of what the classifier simultaneously reports.
+      final arbiter = ControlArbiter();
+      expect(
+        arbiter.arbitrate(wordIsConfident: true, rawControl: ControlGesture.clearAll, now: base),
+        ControlGesture.clearAll,
+      );
+      expect(
+        arbiter.arbitrate(wordIsConfident: true, rawControl: ControlGesture.speak, now: base),
+        ControlGesture.speak,
+      );
     });
 
     test('non-confident frame with no recent history passes the raw reading through', () {

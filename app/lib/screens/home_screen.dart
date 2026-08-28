@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -23,8 +24,9 @@ import '../services/word_completer.dart';
 import '../state/app_state.dart';
 import '../widgets/brand_title.dart';
 import '../widgets/landmark_painter.dart';
-import 'about_screen.dart';
 import 'phrases_sheet.dart';
+import 'profile_screen.dart';
+import 'settings_screen.dart';
 import 'sos_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -95,10 +97,19 @@ class HomeScreenState extends State<HomeScreen>
   String? _lastCommittedWord;
   ControlGesture _controlStableGesture = ControlGesture.none;
   DateTime? _controlStableSince;
+  // The last frame _controlStableGesture was actually seen on, as opposed
+  // to _controlStableSince (when the *hold* started) -- see
+  // _updateControlStability's noise-tolerance comment for why these are
+  // two different timestamps.
+  DateTime? _controlLastSeenAt;
   ControlGesture _controlFiredFor = ControlGesture.none;
   final ControlArbiter _controlArbiter = ControlArbiter();
   DateTime? _lastHandSeenAt;
   bool _autoSpokenForSentence = false;
+  // The wrist position of whichever hand was last treated as "primary" in
+  // Letters/Digits mode -- see _stablePrimaryHand's own comment for why
+  // this exists alongside primaryHand's purely size-based pick.
+  Landmark? _lastPrimaryWrist;
 
   // Only reapplied when either actually changes (not every frame) --
   // setAllowedCategories rebuilds a mask over the full label list, cheap
@@ -334,11 +345,11 @@ class HomeScreenState extends State<HomeScreen>
     }
   }
 
-  Future<void> _openAbout() async {
+  Future<void> _openSettings() async {
     await pause();
     if (!mounted) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AboutScreen()),
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
     );
     await resume();
   }
@@ -422,8 +433,84 @@ class HomeScreenState extends State<HomeScreen>
     }
   }
 
-  void _onHands(List<Hand> hands) {
+  /// Same job as [primaryHand] (pick the one hand that matters when more
+  /// than one is in frame), but with frame-to-frame continuity on top.
+  /// primaryHand alone re-decides from scratch every single frame purely
+  /// by bounding-box size -- fine when one hand is clearly larger, but
+  /// when the signing hand and the phone-holding hand happen to have
+  /// similar apparent size (a plausible framing, not a rare one), the
+  /// "largest" pick can flip between the two from frame to frame with no
+  /// change in what the signer is actually doing. Each flip resets
+  /// whichever hand the classifier and control detector are looking at,
+  /// which reads as exactly the intermittent "sometimes detects, sometimes
+  /// doesn't" real-device report this exists to fix. Preferring whichever
+  /// hand is close to last frame's chosen wrist position (real hands don't
+  /// teleport between frames at ~15-30fps) breaks that tie in favor of
+  /// continuity instead of re-litigating it every frame.
+  Hand? _stablePrimaryHand(List<Hand> hands) {
+    if (hands.isEmpty) {
+      _lastPrimaryWrist = null;
+      return null;
+    }
+    if (hands.length == 1) {
+      _lastPrimaryWrist = hands.first.landmarks.isNotEmpty ? hands.first.landmarks[0] : null;
+      return hands.first;
+    }
+    final lastWrist = _lastPrimaryWrist;
+    if (lastWrist != null) {
+      Hand? closest;
+      var closestDistSq = double.infinity;
+      for (final h in hands) {
+        if (h.landmarks.isEmpty) continue;
+        final w = h.landmarks[0];
+        final dx = w.x - lastWrist.x, dy = w.y - lastWrist.y;
+        final distSq = dx * dx + dy * dy;
+        if (distSq < closestDistSq) {
+          closestDistSq = distSq;
+          closest = h;
+        }
+      }
+      // Only trust continuity if the nearest hand to last frame's pick is
+      // still plausibly the same physical hand (0.25 in normalized
+      // frame-relative coordinates is a generous "didn't teleport" bound,
+      // well beyond a real hand's frame-to-frame movement at a normal
+      // camera frame rate) -- otherwise this was never the same hand
+      // (e.g. it left frame and a different one appeared) and falling
+      // through to the size-based pick is correct.
+      if (closest != null && math.sqrt(closestDistSq) < 0.25) {
+        _lastPrimaryWrist = closest.landmarks[0];
+        return closest;
+      }
+    }
+    final chosen = primaryHand(hands);
+    if (chosen != null && chosen.landmarks.isNotEmpty) _lastPrimaryWrist = chosen.landmarks[0];
+    return chosen;
+  }
+
+  void _onHands(List<Hand> rawHands) {
     final appState = context.read<AppState>();
+    // Digits and fingerspelling letters are one-handed training data in
+    // both ASL and BdSL (see TfliteSignClassifier/DirectStaticClassifier's
+    // own docs); only Words mode genuinely needs a second hand. Collapsing
+    // to one hand right here -- before the classifier, the control-gesture
+    // detector, or the on-screen hand overlay ever sees the frame -- means
+    // a second hand in view (typically the one holding the phone) can't
+    // influence any of them in those modes, rather than needing each
+    // downstream consumer to separately guard against it. This is also
+    // what fixed hands-free control gestures going completely dead on a
+    // real phone-camera selfie shot, where a second hand is in frame
+    // almost continuously, not just occasionally.
+    List<Hand> hands;
+    if (appState.activeCategory == SignCategory.word || rawHands.length <= 1) {
+      // Continuity tracking doesn't apply here (Words mode never
+      // collapses to one hand, and there's nothing to disambiguate with
+      // 0-1 hands anyway) -- cleared so a stale position from several
+      // mode-switches ago can't bias the next Letters/Digits frame.
+      _lastPrimaryWrist = null;
+      hands = rawHands;
+    } else {
+      hands = [_stablePrimaryHand(rawHands)!];
+    }
     final classifier = _classifierFor(appState.language, appState.activeCategory);
     if (_categoryAppliedTo != classifier || _lastAppliedCategory != appState.activeCategory) {
       classifier.setAllowedCategories({appState.activeCategory});
@@ -655,36 +742,102 @@ class HomeScreenState extends State<HomeScreen>
     );
   }
 
+  // How long a dropped/misread run of frames is tolerated mid-hold before
+  // the gesture is treated as genuinely released. ControlGestureDetector
+  // is hard boolean thresholds (a thumb is either "clearly vertical" or
+  // it isn't) evaluated fresh on every frame's raw landmarks, with no
+  // smoothing of its own -- real camera+MediaPipe landmark jitter, or a
+  // real hand that isn't holding its angle perfectly steady, can knock the
+  // reading across that boundary for more than one isolated frame even
+  // while the user keeps trying to hold the same gesture. Without this
+  // grace window, a single off frame during the required 900ms-1400ms
+  // hold reset the whole timer back to zero (see below), which on a noisy
+  // real device can mean the hold never completes at all -- reported as
+  // hands-free gestures working "sometimes, not reliably." First set to
+  // 250ms; widened to 400ms after that alone didn't fully resolve real-
+  // device reports of the same intermittent behavior, on the reasoning
+  // that natural hand wobble is a slightly longer-lived thing than a
+  // single dropped frame.
+  static const _controlNoiseGrace = Duration(milliseconds: 400);
+
+  // How long `control` must actually read `none` before a gesture that
+  // has already fired is allowed to fire again. Deliberately longer than
+  // _controlNoiseGrace: without this separate, longer delay, a single
+  // continuous real-world hold -- noisy enough to dip to `none` for more
+  // than _controlNoiseGrace but with the user never actually releasing --
+  // read as "released and re-grabbed," restarted the hold timer, and
+  // fired again once it re-completed. Repeated over one hold lasting a
+  // few seconds (a user holding longer "to make sure it registers" is
+  // exactly the case most likely to hit this), that meant backspace or
+  // clearAll firing multiple times for what the user experienced as one
+  // gesture -- reported as "delete/clear removes the whole sentence"
+  // instead of one word, and matches the other reported symptom of the
+  // progress ring visibly filling and resetting more than once. The ring
+  // itself still resets on every genuine dip past _controlNoiseGrace (so
+  // it honestly reflects that the reading dropped) -- only *re-firing*
+  // the same already-fired gesture waits for this longer, separate delay.
+  static const _controlRearmDelay = Duration(milliseconds: 900);
+
   void _updateControlStability(ControlGesture control, AppState appState, DateTime now) {
     if (control == ControlGesture.none) {
-      _controlStableGesture = ControlGesture.none;
+      if (_controlStableGesture == ControlGesture.none) return;
+      final lastSeen = _controlLastSeenAt ?? now;
+      final noneDuration = now.difference(lastSeen);
+      if (noneDuration < _controlNoiseGrace) {
+        return; // brief blip -- hold progress and fired-state both untouched
+      }
+      // Past the noise grace: the hold timer resets (so the progress ring
+      // visibly empties, honestly reflecting that the reading dropped),
+      // but the gesture is only actually eligible to fire again once
+      // `none` has persisted past the longer _controlRearmDelay.
       _controlStableSince = null;
-      _controlFiredFor = ControlGesture.none;
+      if (noneDuration >= _controlRearmDelay) {
+        _controlStableGesture = ControlGesture.none;
+        _controlFiredFor = ControlGesture.none;
+        _controlLastSeenAt = null;
+      }
       return;
     }
     if (control != _controlStableGesture) {
       _controlStableGesture = control;
       _controlStableSince = now;
+      _controlLastSeenAt = now;
       return;
     }
-    final since = _controlStableSince;
-    if (since == null) return;
+    _controlLastSeenAt = now;
+    if (_controlStableSince == null) {
+      // Resuming the same gesture after a dip that reset the ring but
+      // wasn't long enough to fully rearm -- restart the visible hold
+      // timer. _controlFiredFor is untouched, so this still can't
+      // re-fire until a genuine _controlRearmDelay-long release happens.
+      _controlStableSince = now;
+      return;
+    }
+    final since = _controlStableSince!;
     final required = _requiredHoldFor(control);
     if (now.difference(since) >= required && control != _controlFiredFor) {
       _controlFiredFor = control;
-      if (control == ControlGesture.backspace &&
-          (appState.sentence.isNotEmpty || _spellBuffer.isNotEmpty)) {
-        _handleBackspace(appState);
-        HapticFeedback.heavyImpact();
-      } else if (control == ControlGesture.clearAll &&
-          (appState.sentence.isNotEmpty || _spellBuffer.isNotEmpty)) {
-        _handleClearAll(appState);
-        HapticFeedback.heavyImpact();
-      } else if (control == ControlGesture.speak &&
-          (appState.sentence.isNotEmpty || _spellBuffer.isNotEmpty)) {
-        HapticFeedback.heavyImpact();
-        _autoSpokenForSentence = true; // don't also fire the pause-based auto-speak right after
-        _handleSpeak(appState);
+      final hasContent = appState.sentence.isNotEmpty || _spellBuffer.isNotEmpty;
+      if (!hasContent) {
+        // The hold genuinely completed, but there's nothing to delete/
+        // clear/speak -- a distinct, lighter tick instead of silence, so
+        // completing the gesture never feels like it did nothing at all.
+        HapticFeedback.selectionClick();
+        return;
+      }
+      switch (control) {
+        case ControlGesture.backspace:
+          _handleBackspace(appState);
+          HapticFeedback.heavyImpact();
+        case ControlGesture.clearAll:
+          _handleClearAll(appState);
+          HapticFeedback.heavyImpact();
+        case ControlGesture.speak:
+          HapticFeedback.heavyImpact();
+          _autoSpokenForSentence = true; // don't also fire the pause-based auto-speak right after
+          _handleSpeak(appState);
+        case ControlGesture.none:
+          break;
       }
     }
   }
@@ -766,6 +919,18 @@ class HomeScreenState extends State<HomeScreen>
         ? null
         : (appState.language == SignLanguage.bdsl ? bengaliFor(rawLabel) : aslDisplayFor(rawLabel));
     return Scaffold(
+      // Swipe in from the left edge to open, same as tapping the menu
+      // icon Flutter automatically puts in the AppBar's leading slot.
+      // This does compete with Android's own edge-swipe "go back" gesture
+      // for the same screen-edge zone -- disabling the swipe entirely was
+      // tried, but RootShell's own PopScope handler (see its
+      // _handleBackFromSignTab) already turns any accidental back gesture
+      // into a "swipe/press back again to exit" confirmation rather than
+      // an immediate exit, on the Sign tab specifically. That safety net
+      // means a misread swipe costs, at worst, a dismissable dialog --
+      // never a silent app exit -- so there's no real reason to give up
+      // the swipe-to-open interaction to guard against it.
+      drawer: const ProfileDrawer(),
       appBar: AppBar(
         title: const BrandTitle('SignBridge'),
         actions: [
@@ -793,104 +958,10 @@ class HomeScreenState extends State<HomeScreen>
             tooltip: 'Switch camera',
             onPressed: _stage == _Stage.ready || _stage == _Stage.cameraError ? _switchCamera : null,
           ),
-          // The less-frequent controls live in an overflow menu rather than
-          // as more icons: five icon buttons plus the title overflow the
-          // app bar on a ~360dp-wide phone, which is squarely inside this
-          // app's target range.
-          PopupMenuButton<String>(
-            tooltip: 'More options',
-            onSelected: (value) {
-              if (value == 'theme') {
-                // Cycles rather than a picker dialog -- three states, one
-                // tap each.
-                const order = [ThemeMode.system, ThemeMode.light, ThemeMode.dark];
-                final next = order[(order.indexOf(appState.themeMode) + 1) % order.length];
-                appState.setThemeMode(next);
-              } else if (value == 'ui_language') {
-                appState.toggleUiLanguage();
-              } else if (value == 'gestures') {
-                appState.toggleControlGestures();
-              } else if (value == 'auto_mode') {
-                appState.toggleAutoAssist();
-              } else if (value == 'about') {
-                _openAbout();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'theme',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(switch (appState.themeMode) {
-                    ThemeMode.light => Icons.light_mode,
-                    ThemeMode.dark => Icons.dark_mode,
-                    ThemeMode.system => Icons.brightness_auto,
-                  }),
-                  title: Text(switch (appState.themeMode) {
-                    ThemeMode.light => 'Theme: Light',
-                    ThemeMode.dark => 'Theme: Dark',
-                    ThemeMode.system => 'Theme: Match device',
-                  }),
-                  subtitle: const Text('Tap to switch', style: TextStyle(fontSize: 11.5)),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'ui_language',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.translate),
-                  // Independent of the ASL/BdSL segmented control above --
-                  // that picks which sign language the camera reads, this
-                  // picks what script the app's own buttons/menus use.
-                  title: Text(appState.uiBangla ? 'App language: বাংলা' : 'App language: English'),
-                  subtitle: const Text('Tap to switch', style: TextStyle(fontSize: 11.5)),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'auto_mode',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    appState.autoAssist ? Icons.auto_awesome : Icons.auto_awesome_outlined,
-                    color: appState.autoAssist ? AppColors.amber : null,
-                  ),
-                  title: Text(appState.autoAssist ? 'Auto mode: On' : 'Auto mode: Off'),
-                  subtitle: Text(
-                    appState.autoAssist
-                        ? 'Hold signs to add, pause to speak'
-                        : 'Use the buttons below instead',
-                    style: const TextStyle(fontSize: 11.5),
-                  ),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'gestures',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    appState.controlGesturesEnabled ? Icons.back_hand : Icons.back_hand_outlined,
-                    color: appState.controlGesturesEnabled ? AppColors.amber : null,
-                  ),
-                  title: Text(appState.controlGesturesEnabled
-                      ? 'Hand-shape gestures: On'
-                      : 'Hand-shape gestures: Off'),
-                  subtitle: Text(
-                    appState.controlGesturesEnabled
-                        ? 'Fist / thumbs-up / thumbs-down control the sentence'
-                        : 'Use the Delete / Clear / Speak buttons instead',
-                    style: const TextStyle(fontSize: 11.5),
-                  ),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'about',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.info_outline),
-                  title: Text(uiText(appState.uiBangla, 'about_this_build', 'About this build')),
-                ),
-              ),
-            ],
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: _openSettings,
           ),
         ],
       ),
@@ -988,34 +1059,34 @@ class HomeScreenState extends State<HomeScreen>
                 ],
               ),
               child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CameraPreview(controller),
-                  CustomPaint(
-                    size: Size.infinite,
-                    painter: LandmarkPainter(
-                      hands: _hands,
-                      previewSize: previewSize,
-                      lensDirection: controller.description.lensDirection,
-                      sensorOrientation: controller.description.sensorOrientation,
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CameraPreview(controller),
+                    CustomPaint(
+                      size: Size.infinite,
+                      painter: LandmarkPainter(
+                        hands: _hands,
+                        previewSize: previewSize,
+                        lensDirection: controller.description.lensDirection,
+                        sensorOrientation: controller.description.sensorOrientation,
+                      ),
                     ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: _TrackingBadge(tracking: _hands.isNotEmpty),
-                  ),
-                  if (_activeControl != ControlGesture.none)
                     Positioned(
                       top: 10,
-                      right: 10,
-                      child: _ControlHintBadge(gesture: _activeControl),
+                      left: 10,
+                      child: _TrackingBadge(tracking: _hands.isNotEmpty),
                     ),
-                ],
+                    if (_activeControl != ControlGesture.none)
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: _ControlHintBadge(gesture: _activeControl),
+                      ),
+                  ],
+                ),
               ),
-            ),
             ),
           ),
         );

@@ -7,6 +7,7 @@ import 'app_theme.dart';
 import 'screens/root_shell.dart';
 import 'services/emergency_contact_store.dart';
 import 'services/phrase_store.dart';
+import 'services/user_profile_store.dart';
 import 'state/app_state.dart';
 
 Future<void> main() async {
@@ -58,6 +59,7 @@ class SignBridgeApp extends StatelessWidget {
         // false and the phrase controls stay disabled.
         ChangeNotifierProvider(create: (_) => PhraseStore()..init()),
         ChangeNotifierProvider(create: (_) => EmergencyContactStore()..init()),
+        ChangeNotifierProvider(create: (_) => UserProfileStore()..init()),
       ],
       child: Consumer<AppState>(
         builder: (context, appState, _) => MaterialApp(

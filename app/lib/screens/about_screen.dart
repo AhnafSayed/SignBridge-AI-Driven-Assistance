@@ -67,7 +67,7 @@ class AboutScreen extends StatelessWidget {
             child: Column(
               children: [
                 _GestureRow(emoji: '🤟', label: 'Hold any sign steady', result: 'Adds it to the sentence'),
-                _GestureRow(emoji: '✊', label: 'Hold a closed fist', result: 'Deletes the last word'),
+                _GestureRow(emoji: '🤙', label: 'Hold a fist, thumb out to the side', result: 'Deletes the last word'),
                 _GestureRow(emoji: '👎', label: 'Hold thumbs-down', result: 'Clears the whole sentence'),
                 _GestureRow(emoji: '👍', label: 'Hold thumbs-up', result: 'Speaks the sentence now'),
                 _GestureRow(emoji: '⏸', label: 'Lower your hand and pause', result: 'Sentence is spoken automatically'),
@@ -96,7 +96,7 @@ class AboutScreen extends StatelessWidget {
                 'from hand geometry, not from the trained classifier, so '
                 'their reliability can vary a little more with lighting or '
                 'camera angle than sign recognition itself does. The '
-                '"Hand-shape gestures" chip above the camera turns just '
+                '"Hand-shape gestures" switch in Settings turns just '
                 'those three gestures off -- holding a sign steady to add it and '
                 'pausing to auto-speak keep working exactly the same, and '
                 'Delete/Clear/Speak fall back to their manual buttons.',
@@ -136,6 +136,16 @@ class AboutScreen extends StatelessWidget {
                 'full-word completions as you spell, Gboard-style, for '
                 'both languages -- tap one to commit the whole word without '
                 'spelling every letter.',
+          ),
+          const _Section(
+            title: 'Credits',
+            body:
+                'The ASL fingerspelling-letter photos in the Dictionary are '
+                'from the "ASL Hand Alphabet Dataset" by shreyagodhani645 on '
+                'Kaggle, licensed CC BY 4.0. Every other Dictionary image is '
+                'a hand-skeleton diagram this app renders itself from its '
+                'own recognition data, not a photo, so it carries no '
+                'separate credit.',
           ),
         ],
       ),

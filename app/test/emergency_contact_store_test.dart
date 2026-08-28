@@ -76,4 +76,18 @@ void main() {
     expect(s2.number, '+15551234567');
     expect(s2.name, 'Jane Doe');
   });
+
+  test('clear unsets both number and name, and it stays unset after a reload', () async {
+    final s1 = await newStore();
+    await s1.setContact(number: '+15551234567', name: 'Jane Doe');
+    await s1.clear();
+    expect(s1.number, isEmpty);
+    expect(s1.name, isEmpty);
+    expect(s1.isConfigured, isFalse);
+
+    final s2 = EmergencyContactStore();
+    await s2.init();
+    expect(s2.number, isEmpty);
+    expect(s2.name, isEmpty);
+  });
 }
