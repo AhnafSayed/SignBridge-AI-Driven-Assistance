@@ -235,6 +235,7 @@ Implemented as a bottom sheet rather than a route deliberately: pushing a route 
 - **Bangla text-to-speech and speech-to-text depend on the device.** Both require the phone's OS to have a Bangla voice/language model installed; the app detects this at runtime and tells the user plainly (falling back to English) rather than failing silently if it is missing.
 - **Hand tracking has no true left/right handedness signal on-device**, only the geometric left-to-right-in-frame convention described in §4.5 — a deliberate, documented workaround for a real plugin limitation, not an oversight, but it means (for example) crossing your hands mid-sign can momentarily relabel which hand is in which slot.
 - **The CPU delegate is slower than GPU would be**, chosen deliberately for cross-device reliability over raw speed (§4.4) — a real trade-off, not a free fix.
+- **Real-device reliability is uneven across categories in a way the held-out benchmark numbers alone do not fully convey.** ASL letters and digits are consistently reliable in hands-on use, matching their ~99% offline figures. BdSL recognition — words, digits, and letters alike — and ASL word recognition are noticeably less consistent in everyday real-device use than their aggregate offline accuracy might suggest, beyond the five already-documented dead BdSL letters. This has not yet been isolated to one specific, measured root cause; it is recorded here as an open observation from real-device testing, not a benchmarked result.
 
 ## 7. App Details
 
