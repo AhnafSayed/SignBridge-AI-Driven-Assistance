@@ -114,11 +114,14 @@ class AboutScreen extends StatelessWidget {
                 'the fingerspelling alphabet; word accuracy on unseen '
                 'signers is lower, around 58%, since 250 fine-grained '
                 'words from real video is a harder problem than a smaller '
-                'vocabulary of clearly distinct handshapes -- digits and '
-                'letters in both languages are recognized above 98% on '
-                'their own. For context, this is comparable to or better '
-                'than published results at this vocabulary size that use '
-                'far more compute than a phone has to work with.',
+                'vocabulary of clearly distinct handshapes. ASL digits and '
+                'letters, and BdSL digits, are recognized above 99% in their '
+                'own mode. The BdSL alphabet is harder, at about 63%, because '
+                'its training photos come from only a few signers, and the '
+                'five letters the model cannot yet recognize are marked in '
+                'the Dictionary. For context, the best published research '
+                'systems score higher at this vocabulary size, but they use '
+                'full video and far more compute than a phone has to work with.',
           ),
           const _Section(
             title: 'Recognition modes',
